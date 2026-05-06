@@ -15,8 +15,6 @@ module tt_um_bytex64_wave_hi (
   input  wire       clk,      // clock
   input  wire       rst_n     // reset_n - low to reset
 );
-  integer i;
-
   // VGA signals
   wire hsync;
   wire vsync;
@@ -67,11 +65,11 @@ module tt_um_bytex64_wave_hi (
   reg [6:0] last_wave [0:1];
   always @(posedge clk, negedge rst_n) begin
     if (~rst_n) begin
-      for (i = 0; i < 2; i++)
-        last_wave[i] <= 64;
+      last_wave[0] <= 64;
+      last_wave[1] <= 64;
     end else begin
-      for (i = 0; i < 2; i++)
-        last_wave[i] <= wave[i];
+      last_wave[0] <= wave[0];
+      last_wave[1] <= wave[1];
     end
   end
 
@@ -84,12 +82,13 @@ module tt_um_bytex64_wave_hi (
     end
   end
   always @(posedge clk, negedge hsync) begin
-    if (~hsync) 
-      for (i = 0; i < 2; i++)
-        wave_pos[i] <= 0;
-    else
-      for (i = 0; i < 2; i++)
-        wave_pos[i] <= wave_pos[i] + {4'd0, wave_speed[i]};
+    if (~hsync) begin
+      wave_pos[0] <= 0;
+      wave_pos[1] <= 0;
+    end else begin
+      wave_pos[0] <= wave_pos[0] + {4'd0, wave_speed[0]};
+      wave_pos[1] <= wave_pos[1] + {4'd0, wave_speed[1]};
+    end
   end
 
   wire [7:0] VY = pix_y[7:0] - 7'd100;
