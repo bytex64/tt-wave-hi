@@ -53,7 +53,7 @@ module sin_rom(
     rom[45] = 7'd3;
     rom[46] = 7'd2;
     rom[47] = 7'd1;
-    rom[48] = 7'd0;
+    rom[48] = 7'd1;
     rom[49] = 7'd1;
     rom[50] = 7'd2;
     rom[51] = 7'd3;

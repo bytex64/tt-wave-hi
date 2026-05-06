@@ -15,6 +15,7 @@ module tt_um_bytex64_wave_hi (
   input  wire       clk,      // clock
   input  wire       rst_n     // reset_n - low to reset
 );
+  integer i;
 
   // VGA signals
   wire hsync;
@@ -50,23 +51,58 @@ module tt_um_bytex64_wave_hi (
   
   wire [9:0] moving_x = pix_x + counter;
 
-  wire [6:0] wave;
-  wire [5:0] wave_addr;
+  wire [6:0] wave [0:1];
+  wire [5:0] wave_addr [0:1];
 
-  sin_rom sin_rom_inst(
-    .addr(wave_addr),
-    .data(wave)
+  sin_rom sin_rom_1(
+    .addr(wave_addr[0]),
+    .data(wave[0])
   );
 
-  wire [7:0] VYW = pix_y[7:0] - 7'd100;
-  wire [6:0] VY = VYW[6:0];
-  assign wave_addr = pix_x[5:0] + counter[5:0];
-  wire PX = (pix_y >= 100 & pix_y < 228)
-      & (VY == wave);
+  sin_rom sin_rom_2(
+    .addr(wave_addr[1]),
+    .data(wave[1])
+  );
 
-  assign R = video_active ? {PX, PX} : 2'b00;
-  assign G = video_active ? {PX, PX} : 2'b00;
-  assign B = video_active ? {PX, PX} : 2'b00;
+  reg [6:0] last_wave [0:1];
+  always @(posedge clk, negedge rst_n) begin
+    if (~rst_n) begin
+      for (i = 0; i < 2; i++)
+        last_wave[i] <= 64;
+    end else begin
+      for (i = 0; i < 2; i++)
+        last_wave[i] <= wave[i];
+    end
+  end
+
+  reg [7:0] wave_speed [0:1];  // speed with which we advance the wave counter, in 2.6 fixed point
+  reg [11:0] wave_pos [0:1];   // current wave position
+  always @(posedge vsync, negedge rst_n) begin
+    if (~rst_n) begin
+      wave_speed[0] <= 8'b01000000;
+      wave_speed[1] <= 8'b10010110;
+    end
+  end
+  always @(posedge clk, negedge hsync) begin
+    if (~hsync) 
+      for (i = 0; i < 2; i++)
+        wave_pos[i] <= 0;
+    else
+      for (i = 0; i < 2; i++)
+        wave_pos[i] <= wave_pos[i] + {4'd0, wave_speed[i]};
+  end
+
+  wire [7:0] VY = pix_y[7:0] - 7'd100;
+  assign wave_addr[0] = wave_pos[0][11:6] + counter[5:0];
+  assign wave_addr[1] = wave_pos[1][11:6] + counter[5:0];
+  wire PX1 = (pix_y >= 100 & pix_y < 228)
+      & (wave[0] >= last_wave[0] ? (VY[6:0] <= wave[0] & VY[6:0] >= last_wave[0]) : (VY[6:0] >= wave[0] & VY[6:0] < last_wave[0]));
+  wire PX2 = (pix_y >= 228 & pix_y < 356)
+      & (wave[1] >= last_wave[1] ? (VY[6:0] <= wave[1] & VY[6:0] >= last_wave[1]) : (VY[6:0] >= wave[1] & VY[6:0] < last_wave[1]));
+
+  assign R = video_active ? {PX1, PX1} : 2'b00;
+  assign G = video_active ? {PX1, PX1} : 2'b00;
+  assign B = video_active ? {PX2, PX2} : 2'b00;
   
   always @(posedge vsync, negedge rst_n) begin
     if (~rst_n) begin
