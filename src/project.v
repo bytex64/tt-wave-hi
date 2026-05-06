@@ -73,6 +73,7 @@ module tt_um_bytex64_wave_hi (
     end
   end
 
+  /*
   reg [7:0] wave_speed [0:1];  // speed with which we advance the wave counter, in 2.6 fixed point
   reg [11:0] wave_pos [0:1];   // current wave position
   always @(posedge vsync, negedge rst_n) begin
@@ -90,18 +91,54 @@ module tt_um_bytex64_wave_hi (
       wave_pos[1] <= wave_pos[1] + {4'd0, wave_speed[1]};
     end
   end
+  */
 
-  wire [7:0] VY = pix_y[7:0] - 7'd100;
-  assign wave_addr[0] = wave_pos[0][11:6] + counter[5:0];
-  assign wave_addr[1] = wave_pos[1][11:6] + counter[5:0];
-  wire PX1 = (pix_y >= 100 & pix_y < 228)
-      & (wave[0] >= last_wave[0] ? (VY[6:0] <= wave[0] & VY[6:0] >= last_wave[0]) : (VY[6:0] >= wave[0] & VY[6:0] < last_wave[0]));
-  wire PX2 = (pix_y >= 228 & pix_y < 356)
-      & (wave[1] >= last_wave[1] ? (VY[6:0] <= wave[1] & VY[6:0] >= last_wave[1]) : (VY[6:0] >= wave[1] & VY[6:0] < last_wave[1]));
+  assign wave_addr[0] = pix_x[5:0] + counter[5:0];
+  assign wave_addr[1] = pix_x[5:0] + counter[5:0] - 100;
+  wire PX1 = wave[0] > last_wave[0] ?
+              (pix_y + {3'd0, wave[0]} > pix_x & pix_y + {3'd0, last_wave[0]} < pix_x) :
+              (pix_y + {3'd0, wave[0]} <= pix_x & pix_y + {3'd0, last_wave[0]} >= pix_x);
+  wire PX2 = wave[1] > last_wave[1] ?
+              (pix_y + {3'd0, wave[1]} + 100 > pix_x & pix_y + {3'd0, last_wave[1]} + 100 < pix_x) :
+              (pix_y + {3'd0, wave[1]} + 100 <= pix_x & pix_y + {3'd0, last_wave[1]} + 100 >= pix_x);
 
-  assign R = video_active ? {PX1, PX1} : 2'b00;
-  assign G = video_active ? {PX1, PX1} : 2'b00;
-  assign B = video_active ? {PX2, PX2} : 2'b00;
+  wire [6:0] delta = wave[0] > last_wave[0] ? wave[0] - last_wave[0] : last_wave[0] - wave[0];
+  reg [2:0] hit [0:1];
+  reg [1:0] brightness;
+  always @(posedge clk, negedge hsync) begin
+    if (~hsync) begin
+      hit[0] <= 0;
+      hit[1] <= 0;
+    end
+    else begin
+      if (PX1)
+        hit[0] <= hit[0] + 1;
+      if (PX2)
+        hit[1] <= hit[1] + 1;
+    end
+  end
+
+  wire [2:0] color =  (hit[0] == 3'b000 ? 3'b000 :
+                        (hit[0] == 3'b001 ? 3'b110 :
+                          (hit[0] == 3'b010 ? 3'b001 :
+                            (hit[0] == 3'b011 ? (hit[1] == 3'b011 ? 3'b000 : 3'b110) :
+                              (hit[0] == 3'b100 ? 3'b001 :
+                                (hit[0] == 3'b101 ? (hit[1] == 3'b101 ? 3'b000 : 3'b110) :
+                                  3'b000))))));
+  reg [2:0] prev_color;
+  always @(posedge clk) begin
+    if (color != prev_color) begin
+      if (color == 3'b110)
+        brightness <= (delta > 3 ? 2'b10 : 2'b11);
+      else
+        brightness <= (delta > 4 ? 2'b11 : delta[2:1]);
+    end
+    prev_color <= color;
+  end
+
+  assign R = video_active & color[2] ? brightness : 2'b00;
+  assign G = video_active & color[1] ? brightness : 2'b00;
+  assign B = video_active & color[0] ? brightness : 2'b00;
   
   always @(posedge vsync, negedge rst_n) begin
     if (~rst_n) begin
