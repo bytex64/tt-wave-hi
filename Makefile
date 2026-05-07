@@ -1,4 +1,4 @@
-SOURCES = hvsync_generator.v sin_rom.v project.v
+SOURCES = hvsync_generator.v clock_gen.v sin_rom.v lfsr.v audio.v project.v
 NAME = wave-hi
 
 PSOURCES = $(addprefix src/,$(SOURCES))

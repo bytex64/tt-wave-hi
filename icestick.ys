@@ -1,3 +1,8 @@
-read_verilog src/hvsync_generator.v src/sin_rom.v src/project.v src/iceshim.v
-synth_ice40 -top iceshim
+read_verilog src/hvsync_generator.v src/clock_gen.v src/sin_rom.v src/lfsr.v src/audio.v src/project.v src/iceshim.v
+
+# Don't ask me why I have to do this
+synth_ice40 -top iceshim -run :map_gates
+pmuxtree
+synth_ice40 -top iceshim -run map_gates:
+
 write_json wave-hi.json

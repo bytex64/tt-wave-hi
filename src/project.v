@@ -25,12 +25,15 @@ module tt_um_bytex64_wave_hi (
   wire [9:0] pix_x;
   wire [9:0] pix_y;
 
+  // Audio
+  wire audio;
+
   // TinyVGA PMOD
   assign uo_out = {hsync, B[0], G[0], R[0], vsync, B[1], G[1], R[1]};
 
   // Unused outputs assigned to 0.
-  assign uio_out = 0;
-  assign uio_oe  = 0;
+  assign uio_out = {audio, 7'b0};
+  assign uio_oe  = 8'b10000000;
 
   // Suppress unused signals warning
   wire _unused_ok = &{ena, ui_in, uio_in};
@@ -93,8 +96,8 @@ module tt_um_bytex64_wave_hi (
   end
   */
 
-  assign wave_addr[0] = pix_x[5:0] + counter[5:0];
-  assign wave_addr[1] = pix_x[5:0] + counter[5:0] - 100;
+  assign wave_addr[0] = moving_x[5:0];
+  assign wave_addr[1] = moving_x[5:0] - 100;
   wire PX1 = wave[0] > last_wave[0] ?
               (pix_y + {3'd0, wave[0]} > pix_x & pix_y + {3'd0, last_wave[0]} < pix_x) :
               (pix_y + {3'd0, wave[0]} <= pix_x & pix_y + {3'd0, last_wave[0]} >= pix_x);
@@ -148,7 +151,35 @@ module tt_um_bytex64_wave_hi (
     end
   end
 
+  wire [5:0] pwm_clock;
+  wire [1:0] atick_clock;
+  wire [3:0] pattern_clock;
+  clock_generator clock_generator_dev(
+    .clk(clk),
+    .rst_n(rst_n),
+    .pwm_clock(pwm_clock),
+    .vsync(vsync),
+    .atick_clock(atick_clock),
+    .pattern_clock(pattern_clock)
+  );
+
+  wire [5:0] lfsr;
+  lfsr lfsr_dev(
+    .clk(clk),
+    .rst_n(rst_n),
+    .bits(lfsr)
+  );
+
+  audio audio_mod(
+    .pwm_clock(pwm_clock),
+    .atick_clock(atick_clock),
+    .pattern_clock(pattern_clock),
+    .rst_n(rst_n),
+    .rng(lfsr[0]),
+    .audio(audio)
+  );
+
   // Suppress unused signals warning
-  wire _unused_ok_ = &{moving_x, pix_y};
+  wire _unused_ok_ = &{pix_x, pix_y};
 
 endmodule
