@@ -411,20 +411,10 @@ module pattern_selector(
   input wire [3:0] row,
   output wire [11:0] freq
 );
-
-  reg [3:0] pnotes [15:0];
+  wire [3:0] pnotes [15:0];
 
   // Pattern 0 is empty
-  initial begin
-    pnotes[0] = 0;
-    // All other patterns are unassigned
-    pnotes[10] = 0;
-    pnotes[11] = 0;
-    pnotes[12] = 0;
-    pnotes[13] = 0;
-    pnotes[14] = 0;
-    pnotes[15] = 0;
-  end
+  assign pnotes[0] = 0;
 
   pattern1_1 p1(
     .select(row),
@@ -470,6 +460,14 @@ module pattern_selector(
     .select(row),
     .note(pnotes[9])
   );
+
+  // All other patterns are unassigned
+  assign pnotes[10] = 0;
+  assign pnotes[11] = 0;
+  assign pnotes[12] = 0;
+  assign pnotes[13] = 0;
+  assign pnotes[14] = 0;
+  assign pnotes[15] = 0;
 
   note_map nm1(
     .select(pnotes[pattern]),
