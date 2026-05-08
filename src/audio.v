@@ -8,13 +8,10 @@ module audio(
 );
   wire [2:0] audio_note0;  // per-channel note values
   wire [2:0] audio_note1;
-  wire [2:0] audio_note2;
   wire [9:0] audio_freq0;  // per-channel frequency values
   wire [9:0] audio_freq1;
-  wire [9:0] audio_freq2;
   wire [1:0] audio_vol0;   // per-channel volume values
   wire [1:0] audio_vol1;
-  wire [1:0] audio_vol2;
 
   instrument0 i0(
     .select(atick_clock),
@@ -26,18 +23,12 @@ module audio(
     .vol(audio_vol1)
   );
 
-  instrument2 i2(
-    .select(atick_clock),
-    .vol(audio_vol2)
-  );
-
   sequence_generator sequence_generator_inst(
-    .pattern_tick(atick_clock[1]),
-    .pattern_clock(pattern_clock),
+    .beat_tick(atick_clock[1]),
+    .beat_clock(pattern_clock[1:0]),
     .rng(rng),
     .note0(audio_note0),
-    .note1(audio_note1),
-    .note2(audio_note2)
+    .note1(audio_note1)
   );
 
   note_map nm0(
@@ -50,20 +41,13 @@ module audio(
     .freq(audio_freq1)
   );
 
-  note_map nm2(
-    .select(audio_note2),
-    .freq(audio_freq2)
-  );
-
   audio_gen audio_gen_inst(
     .pwm_clock(pwm_clock),
     .rst_n(rst_n),
     .timer0(audio_freq0),
     .timer1(audio_freq1 << 1),
-    .timer2(audio_freq2),
     .vol0(audio_vol0),
     .vol1(audio_vol1),
-    .vol2(audio_vol2),
     .rng(rng[0]),
     .audio(audio)
   );
@@ -76,20 +60,18 @@ module audio_gen(
   input wire rst_n,
   input wire [9:0] timer0,
   input wire [9:0] timer1,
-  input wire [9:0] timer2,
   input wire [1:0] vol0,
   input wire [1:0] vol1,
-  input wire [1:0] vol2,
   input wire rng,
   output wire audio
 );
   wire [8:0] level;
-  wire [6:0] ch0_state, ch1_state, ch2_state;
+  wire [6:0] ch0_state, ch1_state;
 
   wire f_clock = pwm_clock == 0;
 
   // verilator lint_off WIDTHTRUNC
-  wire _unused = {timer0, timer1, timer2, vol0, vol1, vol2, ch1_state, ch2_state};
+  wire _unused = {timer0, timer1, vol0, vol1};
   // verilator lint_on WIDTHTRUNC
 
   audio_psg_sin_gen chan0(
@@ -104,21 +86,8 @@ module audio_gen(
     .speed(timer1),
     .out(ch1_state)
   );
-  audio_psg_sin_gen chan2(
-    .clk(f_clock),
-    .rst_n(rst_n),
-    .speed(timer2),
-    .out(ch2_state)
-  );
 
-  // There's probably a better way to do this.
-  assign level = {2'd0, ch0_state} + {2'd0, ch1_state} + {2'd0, ch2_state} + {8'd0, rng};
-  /*
-  assign level = 31 + {(ch0_state ? {3'b0, vol0} : -{3'b0, vol0}), rng}
-                    + {(ch1_state ? {3'b0, vol1} : -{3'b0, vol1}), rng}
-                    + {(ch2_state ? {3'b0, vol2} : -{3'b0, vol2}), rng}
-                    + {(ch3_state ? {3'b0, vol3} : -{3'b0, vol3}), rng};
-  */
+  assign level = {2'd0, ch0_state} + {2'd0, ch1_state} + {8'd0, rng};
   assign audio = pwm_clock <= level;
 endmodule
 
@@ -297,24 +266,22 @@ module instrument2(
 endmodule
 
 module sequence_generator(
-  input wire [3:0] pattern_clock,
-  input wire pattern_tick,
+  input wire [1:0] beat_clock,
+  input wire beat_tick,
   input wire [5:0] rng,
   output wire [2:0] note0,
-  output wire [2:0] note1,
-  output wire [2:0] note2
+  output wire [2:0] note1
 );
   reg [2:0] pattern0;
   reg [2:0] pattern1;
 
-  always @(posedge pattern_tick) begin
-    if (pattern_clock[1:0] == 0)
+  always @(posedge beat_tick) begin
+    if (beat_clock[1:0] == 0)
       pattern0 <= rng[2:0];
-    if (pattern_clock[0] == 0)
+    if (beat_clock[0] == 0)
       pattern1 <= rng[5:3];
   end
 
   assign note0 = pattern0;
   assign note1 = pattern1;
-  assign note2 = pattern1;
 endmodule
