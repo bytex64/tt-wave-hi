@@ -304,16 +304,17 @@ module sequence_generator(
   output wire [2:0] note1,
   output wire [2:0] note2
 );
-  reg [2:0] pattern0 [0:3];
-  reg [2:0] pattern1 [0:7];
+  reg [2:0] pattern0;
+  reg [2:0] pattern1;
 
   always @(posedge pattern_tick) begin
-    if (pattern_clock < 4)
-      pattern0[pattern_clock[1:0]] <= rng[2:0];
-    if (pattern_clock < 8)
-      pattern1[pattern_clock[2:0]] <= rng[5:3];
+    if (pattern_clock[1:0] == 0)
+      pattern0 <= rng[2:0];
+    if (pattern_clock[0] == 0)
+      pattern1 <= rng[5:3];
   end
-  assign note0 = pattern0[pattern_clock[3:2]];
-  assign note1 = pattern1[pattern_clock[3:1]];
-  assign note2 = pattern1[{1'd0,pattern_clock[2:1]}];
+
+  assign note0 = pattern0;
+  assign note1 = pattern1;
+  assign note2 = pattern1;
 endmodule
