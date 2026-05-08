@@ -64,7 +64,7 @@ module audio(
     .vol0(audio_vol0),
     .vol1(audio_vol1),
     .vol2(audio_vol2),
-    .rng(rng[2:0]),
+    .rng(rng[0]),
     .audio(audio)
   );
 
@@ -80,7 +80,7 @@ module audio_gen(
   input wire [1:0] vol0,
   input wire [1:0] vol1,
   input wire [1:0] vol2,
-  input wire [2:0] rng,
+  input wire rng,
   output wire audio
 );
   wire [8:0] level;
@@ -112,7 +112,7 @@ module audio_gen(
   );
 
   // There's probably a better way to do this.
-  assign level = {2'd0, ch0_state} + {2'd0, ch1_state} + {2'd0, ch2_state} + {6'd0, rng};
+  assign level = {2'd0, ch0_state} + {2'd0, ch1_state} + {2'd0, ch2_state} + {8'd0, rng};
   /*
   assign level = 31 + {(ch0_state ? {3'b0, vol0} : -{3'b0, vol0}), rng}
                     + {(ch1_state ? {3'b0, vol1} : -{3'b0, vol1}), rng}
@@ -304,30 +304,14 @@ module sequence_generator(
   output wire [2:0] note1,
   output wire [2:0] note2
 );
-  reg [2:0] next_pattern0 [0:3];
-  reg [2:0] next_pattern1 [0:7];
   reg [2:0] pattern0 [0:3];
   reg [2:0] pattern1 [0:7];
 
   always @(posedge pattern_tick) begin
     if (pattern_clock < 4)
-      next_pattern0[pattern_clock[1:0]] <= rng[2:0];
+      pattern0[pattern_clock[1:0]] <= rng[2:0];
     if (pattern_clock < 8)
-      next_pattern1[pattern_clock[2:0]] <= rng[5:3];
-    if (pattern_clock == 15) begin
-      pattern0[0] <= next_pattern0[0];
-      pattern0[1] <= next_pattern0[1];
-      pattern0[2] <= next_pattern0[2];
-      pattern0[3] <= next_pattern0[3];
-      pattern1[0] <= next_pattern1[0];
-      pattern1[1] <= next_pattern1[1];
-      pattern1[2] <= next_pattern1[2];
-      pattern1[3] <= next_pattern1[3];
-      pattern1[4] <= next_pattern1[4];
-      pattern1[5] <= next_pattern1[5];
-      pattern1[6] <= next_pattern1[6];
-      pattern1[7] <= next_pattern1[7];
-    end
+      pattern1[pattern_clock[2:0]] <= rng[5:3];
   end
   assign note0 = pattern0[pattern_clock[3:2]];
   assign note1 = pattern1[pattern_clock[3:1]];
