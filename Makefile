@@ -9,7 +9,7 @@ check:
 
 .PHONY: lint
 lint:
-	verilator --lint-only -Wall -Wno-DECLFILENAME $(PSOURCES)
+	verilator --lint-only -Wall -Wno-DECLFILENAME --top-module tt_um_bytex64_wave_hi $(PSOURCES)
 
 wave-hi.vvp: $(PSOURCES)
 	iverilog -v -o $@ $(PSOURCES)

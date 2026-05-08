@@ -151,7 +151,7 @@ module tt_um_bytex64_wave_hi (
     end
   end
 
-  wire [5:0] pwm_clock;
+  wire [8:0] pwm_clock;
   wire [1:0] atick_clock;
   wire [3:0] pattern_clock;
   clock_generator clock_generator_dev(
@@ -175,7 +175,7 @@ module tt_um_bytex64_wave_hi (
     .atick_clock(atick_clock),
     .pattern_clock(pattern_clock),
     .rst_n(rst_n),
-    .rng(lfsr[0]),
+    .rng(lfsr),
     .audio(audio)
   );
 
