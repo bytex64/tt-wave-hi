@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Chip
+ * Copyright (c) 2024 bytex64
  * SPDX-License-Identifier: Apache-2.0
  */
 
@@ -38,7 +38,7 @@ module tt_um_bytex64_wave_hi (
   // Suppress unused signals warning
   wire _unused_ok = &{ena, ui_in, uio_in};
 
-  reg [9:0] counter;
+  reg [6:0] counter;
 
   hvsync_generator hvsync_gen(
     .clk(clk),
@@ -50,7 +50,7 @@ module tt_um_bytex64_wave_hi (
     .vpos(pix_y)
   );
   
-  wire [9:0] moving_x = pix_x + counter;
+  wire [6:0] moving_x = pix_x[6:0] + counter[6:0];
 
   wire [6:0] wave [0:1];
   wire [5:0] wave_addr [0:1];
@@ -76,28 +76,9 @@ module tt_um_bytex64_wave_hi (
     end
   end
 
-  /*
-  reg [7:0] wave_speed [0:1];  // speed with which we advance the wave counter, in 2.6 fixed point
-  reg [11:0] wave_pos [0:1];   // current wave position
-  always @(posedge vsync, negedge rst_n) begin
-    if (~rst_n) begin
-      wave_speed[0] <= 8'b01000000;
-      wave_speed[1] <= 8'b10010110;
-    end
-  end
-  always @(posedge clk, negedge hsync) begin
-    if (~hsync) begin
-      wave_pos[0] <= 0;
-      wave_pos[1] <= 0;
-    end else begin
-      wave_pos[0] <= wave_pos[0] + {4'd0, wave_speed[0]};
-      wave_pos[1] <= wave_pos[1] + {4'd0, wave_speed[1]};
-    end
-  end
-  */
-
   assign wave_addr[0] = moving_x[5:0];
-  assign wave_addr[1] = moving_x[5:0] - 100;
+  wire _unused;
+  assign {_unused, wave_addr[1]} = moving_x[6:0] - 7'd100;
   wire PX1 = wave[0] > last_wave[0] ?
               (pix_y + {3'd0, wave[0]} > pix_x & pix_y + {3'd0, last_wave[0]} < pix_x) :
               (pix_y + {3'd0, wave[0]} <= pix_x & pix_y + {3'd0, last_wave[0]} >= pix_x);
@@ -152,15 +133,15 @@ module tt_um_bytex64_wave_hi (
   end
 
   wire [8:0] pwm_clock;
-  wire [1:0] atick_clock;
-  wire [3:0] pattern_clock;
+  wire beat_tick;
+  wire [1:0] beat_clock;
   clock_generator clock_generator_dev(
     .clk(clk),
     .rst_n(rst_n),
     .pwm_clock(pwm_clock),
     .vsync(vsync),
-    .atick_clock(atick_clock),
-    .pattern_clock(pattern_clock)
+    .beat_tick(beat_tick),
+    .beat_clock(beat_clock)
   );
 
   wire [5:0] lfsr;
@@ -172,14 +153,10 @@ module tt_um_bytex64_wave_hi (
 
   audio audio_mod(
     .pwm_clock(pwm_clock),
-    .atick_clock(atick_clock),
-    .pattern_clock(pattern_clock),
+    .beat_tick(beat_tick),
+    .beat_clock(beat_clock),
     .rst_n(rst_n),
     .rng(lfsr),
     .audio(audio)
   );
-
-  // Suppress unused signals warning
-  wire _unused_ok_ = &{pix_x, pix_y};
-
 endmodule

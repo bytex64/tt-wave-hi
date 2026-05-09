@@ -1,7 +1,7 @@
 module audio(
   input wire [8:0] pwm_clock,
-  input wire [1:0] atick_clock,
-  input wire [3:0] pattern_clock,
+  input wire beat_tick,
+  input wire [1:0] beat_clock,
   input wire rst_n,
   input wire [5:0] rng,
   output wire audio
@@ -10,22 +10,10 @@ module audio(
   wire [2:0] audio_note1;
   wire [9:0] audio_freq0;  // per-channel frequency values
   wire [9:0] audio_freq1;
-  wire [1:0] audio_vol0;   // per-channel volume values
-  wire [1:0] audio_vol1;
-
-  instrument0 i0(
-    .select(atick_clock),
-    .vol(audio_vol0)
-  );
-
-  instrument1 i1(
-    .select(atick_clock),
-    .vol(audio_vol1)
-  );
 
   sequence_generator sequence_generator_inst(
-    .beat_tick(atick_clock[1]),
-    .beat_clock(pattern_clock[1:0]),
+    .beat_tick(beat_tick),
+    .beat_clock(beat_clock[1:0]),
     .rng(rng),
     .note0(audio_note0),
     .note1(audio_note1)
@@ -46,8 +34,6 @@ module audio(
     .rst_n(rst_n),
     .timer0(audio_freq0),
     .timer1(audio_freq1 << 1),
-    .vol0(audio_vol0),
-    .vol1(audio_vol1),
     .rng(rng[0]),
     .audio(audio)
   );
@@ -60,8 +46,6 @@ module audio_gen(
   input wire rst_n,
   input wire [9:0] timer0,
   input wire [9:0] timer1,
-  input wire [1:0] vol0,
-  input wire [1:0] vol1,
   input wire rng,
   output wire audio
 );
@@ -69,10 +53,6 @@ module audio_gen(
   wire [6:0] ch0_state, ch1_state;
 
   wire f_clock = pwm_clock == 0;
-
-  // verilator lint_off WIDTHTRUNC
-  wire _unused = {timer0, timer1, vol0, vol1};
-  // verilator lint_on WIDTHTRUNC
 
   audio_psg_sin_gen chan0(
     .clk(f_clock),
@@ -161,7 +141,6 @@ module audio_psg_sin_gen(
   output wire [6:0] out    // the 7-bit output
 );
   reg [13:0] ch_counter;
-  wire _unused;
   sin_rom sin(
     .addr(ch_counter[13:8]),
     .data(out)
@@ -212,57 +191,6 @@ module note_map(
 
   always @(*)
     freq = notes[select];
-endmodule
-
-module instrument0(
-  input wire [1:0] select,
-  output reg [1:0] vol
-);
-  reg [1:0] vol_sequence [3:0];
-
-  initial begin
-    vol_sequence[0] = 2'b11;
-    vol_sequence[1] = 2'b11;
-    vol_sequence[2] = 2'b10;
-    vol_sequence[3] = 2'b00;
-  end
-
-  always @(*)
-    vol = vol_sequence[select];
-endmodule
-
-module instrument1(
-  input wire [1:0] select,
-  output reg [1:0] vol
-);
-  reg [1:0] vol_sequence [3:0];
-
-  initial begin
-    vol_sequence[0] = 2'b10;
-    vol_sequence[1] = 2'b10;
-    vol_sequence[2] = 2'b01;
-    vol_sequence[3] = 2'b00;
-  end
-
-  always @(*)
-    vol = vol_sequence[select];
-endmodule
-
-module instrument2(
-  input wire [1:0] select,
-  output reg [1:0] vol
-);
-  reg [1:0] vol_sequence [3:0];
-
-  initial begin
-    vol_sequence[0] = 2'b11;
-    vol_sequence[1] = 2'b01;
-    vol_sequence[2] = 2'b00;
-    vol_sequence[3] = 2'b00;
-  end
-
-  always @(*)
-    vol = vol_sequence[select];
 endmodule
 
 module sequence_generator(
