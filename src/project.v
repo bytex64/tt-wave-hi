@@ -120,9 +120,27 @@ module tt_um_bytex64_wave_hi (
     color <= next_color;
   end
 
-  assign R = video_active & color[2] ? brightness : 2'b00;
-  assign G = video_active & color[1] ? brightness : 2'b00;
-  assign B = video_active & color[0] ? brightness : 2'b00;
+  wire [5:0] layer0 = {
+    color[2] ? brightness : 2'b00,
+    color[1] ? brightness : 2'b00,
+    color[0] ? brightness : 2'b00
+  };
+
+  wire [16:0] bitmap [0:4];
+  assign bitmap[0] = 17'b11101010010010101;
+  assign bitmap[1] = 17'b00101010101010101;
+  assign bitmap[2] = 17'b11101010101010101;
+  assign bitmap[3] = 17'b00100100111010101;
+  assign bitmap[4] = 17'b11100100101001010;
+  wire [5:0] layer1 = pix_x >= 16 & pix_x < 288 & pix_y >= 384 & pix_y < 464 & pix_x[3:2] != 0 & pix_y[3:2] != 0 ? (
+    bitmap[pix_y[6:4]][pix_x[8:4] - 1] ? 6'b110011 : 0
+  ) : 6'd0;
+
+  wire [5:0] final_color = layer1 != 0 ? layer1 : layer0;
+
+  assign R = video_active ? final_color[5:4] : 2'b00;
+  assign G = video_active ? final_color[3:2] : 2'b00;
+  assign B = video_active ? final_color[1:0] : 2'b00;
   
   always @(posedge vsync, negedge rst_n) begin
     if (~rst_n) begin
