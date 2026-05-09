@@ -15,6 +15,7 @@ module audio(
     .beat_tick(beat_tick),
     .beat_clock(beat_clock[1:0]),
     .rng(rng),
+    .rst_n(rst_n),
     .note0(audio_note0),
     .note1(audio_note1)
   );
@@ -54,13 +55,13 @@ module audio_gen(
 
   wire f_clock = pwm_clock == 0;
 
-  audio_psg_sin_gen chan0(
+  audio_sin_gen chan0(
     .clk(f_clock),
     .rst_n(rst_n),
     .speed(timer0),
     .out(ch0_state)
   );
-  audio_psg_sin_gen chan1(
+  audio_sin_gen chan1(
     .clk(f_clock),
     .rst_n(rst_n),
     .speed(timer1),
@@ -71,70 +72,7 @@ module audio_gen(
   assign audio = pwm_clock <= level;
 endmodule
 
-/* Signal generator for noise channel */
-/*
-module audio_psg_noise_gen(
-  input wire clk,           // the audio clock, which is the main clock
-                            // divided by 64.
-  input wire rst_n,
-  input wire [11:0] timer,  // the timer value
-  input wire rng,           // random bit from lfsr
-  output wire out           // the square wave output
-);
-  reg [11:0] ch_counter;
-  reg ch_state;
-
-  always @(posedge clk, negedge rst_n) begin
-    if (!rst_n) begin
-      ch_counter <= 0;
-      ch_state <= 0;
-    end
-    else begin
-      if (ch_counter == timer) begin
-        ch_state <= rng;
-        ch_counter <= 0;
-      end
-      else
-        ch_counter <= ch_counter + 1;
-    end
-  end
-
-  assign out = ch_state;
-endmodule
-*/
-
-/* Signal generator for square wave channel */
-/*
-module audio_psg_square_gen(
-  input wire clk,           // the audio clock, which is the main clock
-                            // divided by 64.
-  input wire rst_n,
-  input wire [11:0] timer,  // the timer value
-  output wire out           // the square wave output
-);
-  reg [11:0] ch_counter;
-  reg ch_state;
-
-  always @(posedge clk, negedge rst_n) begin
-    if (!rst_n) begin
-      ch_counter <= 0;
-      ch_state <= 0;
-    end
-    else begin
-      if (ch_counter == timer) begin
-        ch_state <= !ch_state;
-        ch_counter <= 0;
-      end
-      else
-        ch_counter <= ch_counter + 1;
-    end
-  end
-
-  assign out = ch_state;
-endmodule
-*/
-
-module audio_psg_sin_gen(
+module audio_sin_gen(
   input wire clk,          // audio clock
   input wire rst_n,
   input wire [9:0] speed,  // speed value (how much the table pointer advances in a clock tick)
@@ -154,7 +92,6 @@ module audio_psg_sin_gen(
   end
 endmodule
 
-// verilator lint_off UNUSEDPARAM
 parameter T_C = 10'd87;   // 261.63 Hz
 parameter T_D = 10'd97;   // 293.66 Hz
 parameter T_E = 10'd109;  // 329.63 Hz
@@ -170,7 +107,6 @@ parameter N_F = 4;
 parameter N_G = 5;
 parameter N_A = 6;
 parameter N_B = 7;
-// verilator lint_on UNUSEDPARAM
 
 module note_map(
   input wire [2:0] select,
@@ -197,19 +133,20 @@ module sequence_generator(
   input wire [1:0] beat_clock,
   input wire beat_tick,
   input wire [5:0] rng,
-  output wire [2:0] note0,
-  output wire [2:0] note1
+  input wire rst_n,
+  output reg [2:0] note0,
+  output reg [2:0] note1
 );
-  reg [2:0] pattern0;
-  reg [2:0] pattern1;
-
-  always @(posedge beat_tick) begin
-    if (beat_clock[1:0] == 0)
-      pattern0 <= rng[2:0];
-    if (beat_clock[0] == 0)
-      pattern1 <= rng[5:3];
+  always @(posedge beat_tick, negedge rst_n) begin
+    if (~rst_n) begin
+      note0 <= 0;
+      note1 <= 0;
+    end
+    else begin
+      if (beat_clock[1:0] == 0)
+        note0 <= rng[2:0];
+      if (beat_clock[0] == 0)
+        note1 <= rng[5:3];
+    end
   end
-
-  assign note0 = pattern0;
-  assign note1 = pattern1;
 endmodule
