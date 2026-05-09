@@ -102,22 +102,22 @@ module tt_um_bytex64_wave_hi (
     end
   end
 
-  wire [2:0] color =  (hit[0] == 3'b000 ? 3'b000 :
-                        (hit[0] == 3'b001 ? 3'b110 :
-                          (hit[0] == 3'b010 ? 3'b001 :
-                            (hit[0] == 3'b011 ? (hit[1] == 3'b011 ? 3'b000 : 3'b110) :
-                              (hit[0] == 3'b100 ? 3'b001 :
-                                (hit[0] == 3'b101 ? (hit[1] == 3'b101 ? 3'b000 : 3'b110) :
-                                  3'b000))))));
-  reg [2:0] prev_color;
+  wire [2:0] next_color = (hit[0] == 3'b000 ? 3'b000 :
+                            (hit[0] == 3'b001 ? 3'b110 :
+                              (hit[0] == 3'b010 ? 3'b001 :
+                                (hit[0] == 3'b011 ? (hit[1] == 3'b011 ? 3'b000 : 3'b110) :
+                                  (hit[0] == 3'b100 ? 3'b001 :
+                                    (hit[0] == 3'b101 ? (hit[1] == 3'b101 ? 3'b000 : 3'b110) :
+                                      3'b000))))));
+  reg [2:0] color;
   always @(posedge clk) begin
-    if (color != prev_color) begin
-      if (color == 3'b110)
+    if (next_color != color) begin
+      if (next_color == 3'b110 || next_color == 3'b111)
         brightness <= (delta > 3 ? 2'b10 : 2'b11);
       else
         brightness <= (delta > 4 ? 2'b11 : delta[2:1]);
     end
-    prev_color <= color;
+    color <= next_color;
   end
 
   assign R = video_active & color[2] ? brightness : 2'b00;
