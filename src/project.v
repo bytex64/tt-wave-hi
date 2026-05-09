@@ -155,6 +155,9 @@ module tt_um_bytex64_wave_hi (
     .pwm_clock(pwm_clock),
     .beat_tick(beat_tick),
     .beat_clock(beat_clock),
+    .manual_override(ui_in[7]),
+    .manual_note0(ui_in[2:0]),
+    .manual_note1(ui_in[5:3]),
     .rst_n(rst_n),
     .rng(lfsr),
     .audio(audio)

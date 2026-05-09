@@ -2,12 +2,15 @@ module audio(
   input wire [8:0] pwm_clock,
   input wire beat_tick,
   input wire [1:0] beat_clock,
+  input wire manual_override,     // active high
+  input wire [2:0] manual_note0,
+  input wire [2:0] manual_note1,
   input wire rst_n,
   input wire [5:0] rng,
   output wire audio
 );
-  wire [2:0] audio_note0;  // per-channel note values
-  wire [2:0] audio_note1;
+  wire [2:0] seq_note0;    // sequenced note values
+  wire [2:0] seq_note1;
   wire [9:0] audio_freq0;  // per-channel frequency values
   wire [9:0] audio_freq1;
 
@@ -16,17 +19,17 @@ module audio(
     .beat_clock(beat_clock[1:0]),
     .rng(rng),
     .rst_n(rst_n),
-    .note0(audio_note0),
-    .note1(audio_note1)
+    .note0(seq_note0),
+    .note1(seq_note1)
   );
 
   note_map nm0(
-    .select(audio_note0),
+    .select(manual_override ? manual_note0 : seq_note0),
     .freq(audio_freq0)
   );
 
   note_map nm1(
-    .select(audio_note1),
+    .select(manual_override ? manual_note1 : seq_note1),
     .freq(audio_freq1)
   );
 
@@ -38,7 +41,6 @@ module audio(
     .rng(rng[0]),
     .audio(audio)
   );
-
 endmodule
 
 /* Three sine wave generator */
