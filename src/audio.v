@@ -7,7 +7,8 @@ module audio(
   input wire [2:0] manual_note1,
   input wire rst_n,
   input wire [5:0] rng,
-  output wire audio
+  output wire audio,
+  output wire [2:0] audio_data
 );
   wire [2:0] seq_note0;    // sequenced note values
   wire [2:0] seq_note1;
@@ -39,7 +40,8 @@ module audio(
     .timer0(audio_freq0),
     .timer1(audio_freq1 << 1),
     .rng(rng[0]),
-    .audio(audio)
+    .audio(audio),
+    .audio_data(audio_data)
   );
 endmodule
 
@@ -50,7 +52,8 @@ module audio_gen(
   input wire [9:0] timer0,
   input wire [9:0] timer1,
   input wire rng,
-  output wire audio
+  output wire audio,
+  output wire [2:0] audio_data
 );
   wire [8:0] level;
   wire [6:0] ch0_state, ch1_state;
@@ -71,6 +74,7 @@ module audio_gen(
   );
 
   assign level = {2'd0, ch0_state} + {2'd0, ch1_state} + {8'd0, rng};
+  assign audio_data = level[5:3];
   assign audio = pwm_clock <= level;
 endmodule
 

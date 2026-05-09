@@ -126,14 +126,22 @@ module tt_um_bytex64_wave_hi (
     color[0] ? brightness : 2'b00
   };
 
+  wire [2:0] audio_data;
   wire [16:0] bitmap [0:4];
-  assign bitmap[0] = 17'b11101010010010101;
+  assign bitmap[0] = 17'b11101010111010101;
   assign bitmap[1] = 17'b00101010101010101;
-  assign bitmap[2] = 17'b11101010101010101;
-  assign bitmap[3] = 17'b00100100111010101;
-  assign bitmap[4] = 17'b11100100101001010;
+  assign bitmap[2] = 17'b11101010111010101;
+  assign bitmap[3] = 17'b00101010101010101;
+  assign bitmap[4] = 17'b11100100101011111;
+  reg [1:0] sound_color;
+  always @(posedge pix_x[4], negedge rst_n) begin
+    if (~rst_n)
+      sound_color <= 0;
+    else
+      sound_color <= audio_data[2:1];
+  end
   wire [5:0] layer1 = pix_x >= 16 & pix_x < 288 & pix_y >= 384 & pix_y < 464 & pix_x[3:2] != 0 & pix_y[3:2] != 0 ? (
-    bitmap[pix_y[6:4]][pix_x[8:4] - 1] ? 6'b110011 : 0
+    bitmap[pix_y[6:4]][pix_x[8:4] - 1] ? {sound_color, 1'd0, audio_data[0], sound_color} : 0
   ) : 6'd0;
 
   wire [5:0] final_color = layer1 != 0 ? layer1 : layer0;
@@ -178,6 +186,7 @@ module tt_um_bytex64_wave_hi (
     .manual_note1(ui_in[5:3]),
     .rst_n(rst_n),
     .rng(lfsr),
-    .audio(audio)
+    .audio(audio),
+    .audio_data(audio_data)
   );
 endmodule
